@@ -1,4 +1,4 @@
-name: Android CI (with tun2socks + xray)
+name: Build Android VPN (with tun2socks + Xray)
 
 on:
   push:
@@ -23,30 +23,33 @@ jobs:
         with:
           go-version: '1.22.x'
 
-      # ---------- build tun2socks (android/arm64) ----------
+      # ---------- Build tun2socks (android/arm64) ----------
       - name: Build tun2socks for android/arm64
         shell: bash
         run: |
           set -eux
-          mkdir -p build/bin
-          git clone --depth=1 https://github.com/xjasonlyu/tun2socks.git tun2socks
-          cd tun2socks
+          mkdir -p build/bin third_party
+          git clone --depth=1 https://github.com/xjasonlyu/tun2socks.git third_party/tun2socks
+          pushd third_party/tun2socks
           export GOOS=android GOARCH=arm64 CGO_ENABLED=0 GO111MODULE=on
-          go build -trimpath -ldflags="-s -w" -o ../build/bin/tun2socks ./cmd/tun2socks
+          # خروجی: build/bin/tun2socks
+          go build -trimpath -ldflags="-s -w" -o ../../build/bin/tun2socks ./cmd/cli
+          popd
 
-      # ---------- build xray-core (android/arm64) ----------
+      # ---------- Build Xray-core (android/arm64) ----------
       - name: Build Xray-core for android/arm64
         shell: bash
         run: |
           set -eux
-          cd $GITHUB_WORKSPACE
-          git clone --depth=1 https://github.com/XTLS/Xray-core.git xray-core
-          cd xray-core
+          mkdir -p build/bin third_party
+          git clone --depth=1 https://github.com/XTLS/Xray-core.git third_party/xray-core
+          pushd third_party/xray-core
           export GOOS=android GOARCH=arm64 CGO_ENABLED=0 GO111MODULE=on
-          # باینری xray
-          go build -trimpath -ldflags="-s -w" -o ../build/bin/xray ./main
+          # خروجی: build/bin/xray
+          go build -trimpath -ldflags="-s -w" -o ../../build/bin/xray ./main
+          popd
 
-      # ---------- copy binaries into app assets ----------
+      # ---------- Copy binaries into app assets ----------
       - name: Place binaries into app assets
         shell: bash
         run: |
@@ -54,33 +57,23 @@ jobs:
           mkdir -p app/src/main/assets/bin
           cp -f build/bin/tun2socks app/src/main/assets/bin/
           cp -f build/bin/xray       app/src/main/assets/bin/
-          ls -al app/src/main/assets/bin
 
-      # اگر gradlew داری، مجوز اجرایی بده (بی‌ضرر است)
-      - name: Grant execute permission for gradlew
-        if: hash('bash') && (exists('gradlew') || exists('./gradlew'))
-        run: chmod +x ./gradlew
+      # ---------- Generate Gradle Wrapper (if not in repo) ----------
+      - name: Gradle wrapper
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.7
+          arguments: wrapper
 
-      # ---------- build APK ----------
+      # ---------- Build APK ----------
       - name: Build Debug APK
-        shell: bash
-        run: |
-          set -eux
-          if [ -f "./gradlew" ]; then
-            ./gradlew :app:assembleDebug
-          else
-            # اگر wrapper نیست، از Gradle نصب‌شده روی runner استفاده کن
-            gradle :app:assembleDebug
-          fi
+        run: ./gradlew --no-daemon :app:assembleDebug
 
       - name: Show APK path(s)
-        shell: bash
-        run: |
-          echo "APK files found:"
-          find app/build/outputs -type f -name "*.apk" -print
+        run: ls -al app/build/outputs/apk/debug || true
 
       - name: Upload APK(s)
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/**/*.apk
+          path: app/build/outputs/apk/debug/*.apk
