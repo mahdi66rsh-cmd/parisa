@@ -1,4 +1,4 @@
-name: Build Android VPN (Java)
+name: build
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
         with:
           go-version: '1.22.x'
 
-      # --- Build tun2socks (مسیر صحیح cmd/tun2socks) ---
+      # ---------- build tun2socks (ARM64 / Android) ----------
       - name: Build tun2socks for android/arm64
         shell: bash
         run: |
@@ -32,56 +32,52 @@ jobs:
           git clone --depth=1 https://github.com/xjasonlyu/tun2socks.git third_party/tun2socks
           pushd third_party/tun2socks
           export GOOS=android GOARCH=arm64 CGO_ENABLED=0 GO111MODULE=on
-          go build -trimpath -ldflags="-s -w" -o ../../build/bin/tun2socks ./cmd/tun2socks
+          # نقطه به‌جای ./cmd/tun2socks  ←  فیکس اصلی
+          go build -trimpath -ldflags="-s -w" -o ../../build/bin/tun2socks .
           popd
 
-      # --- Build Xray-core ---
+      # ---------- build xray-core (اختیاری ولی توصیه می‌شود) ----------
       - name: Build Xray-core for android/arm64
         shell: bash
         run: |
           set -eux
-          mkdir -p build/bin third_party
-          git clone --depth=1 https://github.com/XTLS/Xray-core.git third_party/xray
-          pushd third_party/xray
-          export CGO_ENABLED=0 GOOS=android GOARCH=arm64
+          git clone --depth=1 https://github.com/XTLS/Xray-core.git third_party/xray-core
+          pushd third_party/xray-core
+          export GOOS=android GOARCH=arm64 CGO_ENABLED=0 GO111MODULE=on
           go build -trimpath -ldflags="-s -w" -o ../../build/bin/xray ./main
           popd
 
-      # --- کپی باینری‌ها به assets ---
+      # ---------- کپی باینری‌ها داخل assets اپ ----------
       - name: Place binaries into app assets
         shell: bash
         run: |
           set -eux
-          mkdir -p app/src/main/assets/bin
-          cp -f build/bin/tun2socks app/src/main/assets/bin/
-          cp -f build/bin/xray app/src/main/assets/bin/
-          chmod +x app/src/main/assets/bin/*
+          mkdir -p app/src/main/assets/bin/arm64-v8a
+          cp -f build/bin/* app/src/main/assets/bin/arm64-v8a/
+          chmod +x app/src/main/assets/bin/arm64-v8a/*
 
-      # --- Android SDK ---
+      # ---------- نصب Android SDK ----------
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-
-      # --- Gradle (بدون gradlew) ---
-      - name: Set up Gradle 8.7
-        uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: '8.7'
+          api-level: 34
+          build-tools: "34.0.0"
 
-      # --- Build APK ---
+      # ---------- بیلد APK با گرادل ----------
       - name: Build Debug APK
-        working-directory: app
-        run: |
-          gradle --no-daemon assembleDebug
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.7
+          arguments: assembleDebug
 
+      # ---------- نمایش مسیر APK ----------
       - name: Show APK path(s)
         shell: bash
-        run: |
-          ls -lah app/build/outputs/apk || true
-          find app/build/outputs -name "*.apk" -print
+        run: ls -lah app/build/outputs/apk/debug || true
 
+      # ---------- آپلود خروجی‌ها ----------
       - name: Upload APK(s)
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
-          path: app/build/outputs/apk/**/*.apk
-          compression-level: 0
+          path: app/build/outputs/apk/debug/*.apk
