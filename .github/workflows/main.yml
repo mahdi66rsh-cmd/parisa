@@ -1,59 +1,96 @@
-name: Android VPN Build
+name: Android CI (APK + binaries)
 
 on:
   push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: "17"
 
       - name: Set up Go 1.22
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: "1.22.x"
 
-      - name: Build Xray-core for android/arm64
-        run: |
-          mkdir -p build/bin
-          git clone --depth=1 https://github.com/XTLS/Xray-core.git
-          cd Xray-core
-          go build -trimpath -ldflags="-s -w" -o ../build/bin/xray ./main
-
+      # ---------- Build tun2socks (android/arm64) ----------
       - name: Build tun2socks for android/arm64
+        shell: bash
         run: |
-          mkdir -p build/bin
-          git clone --depth=1 https://github.com/xjasonlyu/tun2socks.git
-          cd tun2socks
+          set -eux
+          mkdir -p build/bin third_party
+          git clone --depth=1 https://github.com/xjasonlyu/tun2socks.git third_party/tun2socks
+          pushd third_party/tun2socks
           export GOOS=android GOARCH=arm64 CGO_ENABLED=0 GO111MODULE=on
-          go build -trimpath -ldflags="-s -w" -o ../build/bin/tun2socks ./cmd/tun2socks
+          # binary name: tun2socks
+          go build -trimpath -ldflags "-s -w" -o ../../build/bin/tun2socks ./cmd/tun2socks
+          popd
 
-      - name: Place binaries into app assets
+      # ---------- Build Xray-core (android/arm64) ----------
+      - name: Build Xray-core for android/arm64
+        shell: bash
         run: |
-          mkdir -p app/src/main/assets
-          cp build/bin/* app/src/main/assets/
+          set -eux
+          mkdir -p build/bin third_party
+          git clone --depth=1 https://github.com/XTLS/Xray-core.git third_party/xray-core
+          pushd third_party/xray-core
+          export GOOS=android GOARCH=arm64 CGO_ENABLED=0
+          # binary name: xray
+          go build -trimpath -ldflags "-s -w" -o ../../build/bin/xray ./main
+          popd
 
+      # ---------- Put binaries into app assets ----------
+      - name: Place binaries into app assets
+        shell: bash
+        run: |
+          set -eux
+          mkdir -p app/src/main/assets/bin
+          cp -f build/bin/* app/src/main/assets/bin/ || true
+          ls -lah app/src/main/assets/bin || true
+
+      # ---------- Gradle build ----------
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        shell: bash
+        run: |
+          set -eux
+          if [ ! -f ./gradlew ]; then
+            echo "ERROR: gradlew not found at repo root."; exit 1
+          fi
+          chmod +x ./gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug
+        shell: bash
+        run: |
+          set -eux
+          ./gradlew --no-daemon clean :app:assembleDebug
 
       - name: Show APK path(s)
-        run: find app/build/outputs/apk/debug -name "*.apk"
+        shell: bash
+        run: |
+          set -eux
+          ls -lah app/build/outputs/apk/debug || true
 
+      # ---------- Upload artifacts (APK + binaries) ----------
       - name: Upload APK(s)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: VPN-App
+          name: app-debug
           path: app/build/outputs/apk/debug/*.apk
+
+      - name: Upload built binaries (xray & tun2socks)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-binaries
+          path: |
+            build/bin/*
+            app/src/main/assets/bin/*
