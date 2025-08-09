@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "parisa"   // اگر اسم پروژه‌ات چیز دیگری‌ست همین‌جا تغییر بده
+rootProject.name = "parisa"
 include(":app")
