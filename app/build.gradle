@@ -1,9 +1,9 @@
 plugins {
-    id 'com.android.application'
+    id 'com.android.application' version '8.2.2'
 }
 
 android {
-    namespace 'com.example.nativex'   // اگر پکیج متفاوت است با Manifest یکی کن
+    namespace 'com.example.nativex'
     compileSdk 34
 
     defaultConfig {
@@ -24,12 +24,6 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
-    }
-
-    packagingOptions {
-        jniLibs {
-            useLegacyPackaging = true
-        }
     }
 }
 
