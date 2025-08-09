@@ -1,7 +1,6 @@
-// Project-level build.gradle (بدون نسخه‌گذاریِ plugin اینجا)
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+// Project-level build.gradle (root)
+// عمداً خالی از repository است؛ مخازن فقط در settings.gradle تعریف می‌شوند.
+
+tasks.register("clean", Delete) {
+    delete(rootProject.buildDir)
 }
