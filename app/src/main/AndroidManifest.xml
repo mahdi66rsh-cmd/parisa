@@ -1,19 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- مجوزها -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
-    <uses-feature android:name="android.software.leanback" android:required="false"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"
+        tools:targetApi="33"/>
 
     <application
-        android:label="${appLabel}"
-        android:icon="@mipmap/ic_launcher"
         android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="NativeHello"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 
+        <!-- لانچر: صفحه ورود -->
         <activity
             android:name=".LoginActivity"
             android:exported="true">
@@ -23,11 +25,15 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".HomeActivity" android:exported="false"/>
+        <!-- صفحه خانه -->
+        <activity
+            android:name=".HomeActivity"
+            android:exported="false" />
 
+        <!-- سرویس VPN -->
         <service
             android:name=".SimpleVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
-            android:exported="true" />
+            android:exported="false" />
     </application>
 </manifest>
