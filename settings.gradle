@@ -4,11 +4,6 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-    plugins {
-        id("com.android.application") version "8.7.2"
-        // اگر Kotlin داری، این رو هم اضافه کن:
-        // id("org.jetbrains.kotlin.android") version "2.0.20"
-    }
 }
 
 dependencyResolutionManagement {
@@ -19,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "parisa"
+rootProject.name = "parisa"   // اگر اسم پروژه‌ات چیز دیگری‌ست همین‌جا تغییر بده
 include(":app")
