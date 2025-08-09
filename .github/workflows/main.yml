@@ -1,4 +1,4 @@
-name: Build Android VPN (with Xray & tun2socks)
+name: Build Android APK (with tun2socks)
 
 on:
   push:
@@ -7,7 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
 
     steps:
       - name: Checkout
@@ -17,27 +16,15 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Go 1.22
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22.x'
+          go-version: "1.22.x"
 
-      # ---------- Build Xray-core (android/arm64) ----------
-      - name: Build Xray-core
-        shell: bash
-        run: |
-          set -eux
-          mkdir -p build/bin
-          git clone --depth=1 https://github.com/XTLS/Xray-core.git
-          cd Xray-core
-          export GOOS=android GOARCH=arm64 CGO_ENABLED=0
-          go build -trimpath -ldflags="-s -w" -o ../build/bin/xray ./main
-          cd ..
-
-      # ---------- Build tun2socks (android/arm64) ----------
-      - name: Build tun2socks
+      # --- Build tun2socks (arm64) ---
+      - name: Build tun2socks for android/arm64
         shell: bash
         run: |
           set -eux
@@ -45,37 +32,22 @@ jobs:
           git clone --depth=1 https://github.com/xjasonlyu/tun2socks.git
           cd tun2socks
           export GOOS=android GOARCH=arm64 CGO_ENABLED=0 GO111MODULE=on
-          PKG="./cmd/tun2socks"
-          if [ ! -d "$PKG" ]; then
-            PKG="./cmd/cli"
-          fi
-          go build -trimpath -ldflags="-s -w" -o ../build/bin/tun2socks "$PKG"
+          # نکته مهم: مسیر صحیح cmd همین tun2socks است (نه cli)
+          go build -trimpath -ldflags='-s -w' -o ../build/bin/tun2socks ./cmd/tun2socks
           cd ..
-
-      # ---------- Put binaries into app assets ----------
-      - name: Place binaries into app assets
-        shell: bash
-        run: |
-          set -eux
+          # کپی به assets پروژه اندروید
           mkdir -p app/src/main/assets/bin
-          cp build/bin/xray app/src/main/assets/bin/xray
-          cp build/bin/tun2socks app/src/main/assets/bin/tun2socks
-          # chmod در زمان اجرا داخل اپ انجام می‌شود
+          cp build/bin/tun2socks app/src/main/assets/bin/tun2socks-arm64
+          chmod +x app/src/main/assets/bin/tun2socks-arm64
 
-      # ---------- Build APK ----------
-      - name: Ensure Gradle Wrapper
-        shell: bash
-        run: |
-          if [ ! -f gradlew ]; then
-            gradle wrapper --gradle-version 8.7
-          fi
-          chmod +x gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
 
       - name: Build Debug APK
-        run: ./gradlew clean :app:assembleDebug --stacktrace
+        run: ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Show APKs
-        run: find app/build/outputs/apk -type f -name "*.apk" -print
+      - name: Show APK path(s)
+        run: ls -alh app/build/outputs/apk/debug || true
 
       - name: Upload APK(s)
         uses: actions/upload-artifact@v4
