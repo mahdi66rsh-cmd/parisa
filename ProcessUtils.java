@@ -1,42 +1,38 @@
-package com.example.nativex;
-
 import android.content.Context;
-import android.content.res.AssetManager;
-
+import android.util.Log;
+import android.widget.Toast;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 
-public final class ProcessUtils {
+public class ProcessUtils {
 
-    private ProcessUtils(){}
+    public static boolean ensureBinariesReady(Context ctx) {
+        try {
+            // نام باینری را مطابق چیزی که ساختی بگذار: مثلا xray یا tun2socks
+            String binName = "xray"; // یا "tun2socks"
+            File dst = new File(ctx.getFilesDir(), binName);
 
-    public static void prepareBinaries(Context ctx) throws IOException, InterruptedException {
-        File binDir = new File(ctx.getFilesDir(), "bin/arm64-v8a");
-        if (!binDir.exists() && !binDir.mkdirs()) {
-            throw new IOException("cannot create " + binDir);
+            if (!dst.exists() || dst.length() == 0) {
+                copyAsset(ctx, binName, dst);
+            }
+            // اجرای chmod
+            dst.setExecutable(true);
+
+            return true;
+        } catch (Throwable t) {
+            Log.e("ProcessUtils", "binary prepare failed", t);
+            Toast.makeText(ctx, "خطا در آماده‌سازی باینری: " + t.getClass().getSimpleName(), Toast.LENGTH_LONG).show();
+            return false;
         }
-        copyIfMissing(ctx.getAssets(), "bin/arm64-v8a/xray",  new File(binDir, "xray"));
-        copyIfMissing(ctx.getAssets(), "bin/arm64-v8a/tun2socks", new File(binDir, "tun2socks"));
-
-        // give execute permission
-        runChmod(new File(binDir, "xray"));
-        runChmod(new File(binDir, "tun2socks"));
     }
 
-    private static void copyIfMissing(AssetManager am, String assetPath, File out) throws IOException {
-        if (out.exists() && out.length() > 0) return;
-        try (InputStream in = am.open(assetPath); FileOutputStream os = new FileOutputStream(out)) {
+    private static void copyAsset(Context ctx, String assetName, File outFile) throws Exception {
+        try (InputStream in = ctx.getAssets().open(assetName);
+             FileOutputStream out = new FileOutputStream(outFile)) {
             byte[] buf = new byte[8192];
             int n;
-            while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
         }
-    }
-
-    private static void runChmod(File f) throws IOException, InterruptedException {
-        Process p = new ProcessBuilder("chmod", "700", f.getAbsolutePath()).start();
-        int code = p.waitFor();
-        if (code != 0) throw new IOException("chmod failed: " + code);
     }
 }
