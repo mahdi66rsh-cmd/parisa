@@ -23,7 +23,6 @@ public class HomeActivity extends AppCompatActivity {
         btnConnect.setOnClickListener(v -> {
             try {
                 // باینری‌ها را از assets کپی و executable کن
-                ProcessUtils.prepareBinaries(this);
 
                 // سرویس را به صورت Foreground استارت کن (فعلاً دمو)
                 Intent i = new Intent(this, SimpleVpnService.class);
