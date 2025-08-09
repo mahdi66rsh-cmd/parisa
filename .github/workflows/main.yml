@@ -23,21 +23,20 @@ jobs:
         with:
           go-version: '1.22.x'
 
-      # === Build tun2socks (android/arm64) ===
       - name: Build tun2socks for android/arm64
         shell: bash
         run: |
           set -eux
           mkdir -p build/bin
           git clone --depth=1 https://github.com/xjasonlyu/tun2socks.git
-          pushd tun2socks
+          cd tun2socks
           export GOOS=android GOARCH=arm64 CGO_ENABLED=0 GO111MODULE=on
-          go build -trimpath -ldflags='-s -w' -o ../build/bin/tun2socks
-          popd
+          go build -trimpath -ldflags "-s -w" -o ../build/bin/tun2socks ./cmd/cli
+          cd ..
+          mkdir -p app/src/main/assets/bin
           install -Dm755 build/bin/tun2socks app/src/main/assets/bin/tun2socks-arm64
 
-      # همیشه gradlew رو درست می‌کنیم اگر نبود
-      - name: Ensure Gradle Wrapper exists
+      - name: Ensure Gradle Wrapper
         shell: bash
         run: |
           if [ ! -f gradlew ]; then
@@ -49,7 +48,8 @@ distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
 EOF
-            curl -sL https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+            curl -sL https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.jar \
+              -o gradle/wrapper/gradle-wrapper.jar
             cat > gradlew <<'EOF'
 #!/usr/bin/env sh
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -61,7 +61,6 @@ EOF
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      # Build APK
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v3
         with:
