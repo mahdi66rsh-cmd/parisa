@@ -5,17 +5,27 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity {
 
-    // 10 کاربر ثابت
-    private static final String[][] USERS = new String[][]{
-            {"user1", "pass1"}, {"user2", "pass2"}, {"user3", "pass3"},
-            {"user4", "pass4"}, {"user5", "pass5"}, {"user6", "pass6"},
-            {"user7", "pass7"}, {"user8", "pass8"}, {"user9", "pass9"},
-            {"user10", "pass10"}
-    };
+    private static final Map<String,String> USERS = new HashMap<>();
+    static {
+        USERS.put("user1", "pass1");
+        USERS.put("user2", "pass2");
+        USERS.put("user3", "pass3");
+        USERS.put("user4", "pass4");
+        USERS.put("user5", "pass5");
+        USERS.put("user6", "pass6");
+        USERS.put("user7", "pass7");
+        USERS.put("user8", "pass8");
+        USERS.put("user9", "pass9");
+        USERS.put("user10", "pass10");
+    }
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,15 +38,11 @@ public class LoginActivity extends AppCompatActivity {
         btnLogin.setOnClickListener(v -> {
             String u = etUser.getText().toString().trim();
             String p = etPass.getText().toString().trim();
-            boolean ok = false;
-            for (String[] pair : USERS)
-                if (pair[0].equals(u) && pair[1].equals(p)) { ok = true; break; }
-
-            if (ok) {
+            if (USERS.containsKey(u) && p.equals(USERS.get(u))) {
                 startActivity(new Intent(this, HomeActivity.class));
                 finish();
             } else {
-                Toast.makeText(this, "نام کاربری/رمز اشتباه است", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "نام کاربری/رمز نادرست است", Toast.LENGTH_SHORT).show();
             }
         });
     }
